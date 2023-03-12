@@ -18,7 +18,7 @@ local props = {
   user = "root",
   password = "123456"
 }
-local salt = "franzli"
+
 local function close_db( db )
     if not db then
       return
@@ -65,7 +65,7 @@ local function get_secertKey_by_accesskey(access_key)
 end
 
 
-local function router(uri)
+local function get_real_api(uri)
   local quoted= ngx.quote_sql_str(tostring(uri))
   local sql = "SELECT * FROM uri_mapping WHERE source = " .. quoted .."and is_delete = 0"
   res, err, errno, sqlstate = db:query(sql)
@@ -77,14 +77,15 @@ local function router(uri)
   for i, row in ipairs(res) do
     for name, value in pairs(row) do
        if name == "taget" then
-          ngx.var.upstream = value
-        return
+          return value;
       end
     end
   end
 end
 
 
+
+local salt = "franzli"
 local function get_sign(access_key,timestamp,nouce)
   local sk = get_secertKey_by_accesskey(access_key)
   if sk == nil then
@@ -94,8 +95,6 @@ local function get_sign(access_key,timestamp,nouce)
   --todo Add nose to Redis and verify nose times
   return sha.sha1(access_key .. nouce .. salt .. sk)
 end
-
-
 local function main()
     -- validated the req parameter
     if not signDt.access_key
@@ -110,17 +109,14 @@ local function main()
     local server_sign = tostring(get_sign(signDt.access_key,signDt.timestamp,signDt.nouce))
 
     if server_sign == signDt.sign then
-      router(uri)
+      -- set proxy_pass path
+      ngx.var.upstream = get_real_api(uri)
       return
     else
-      auth_error(3)
+      auth_error("   server    " .. server_sign  .. "   remote    " .. signDt.sign)
       return
     end
 end
-
-
-
-
 -- main function
 main()
 
