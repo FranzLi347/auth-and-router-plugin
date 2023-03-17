@@ -4,8 +4,7 @@
 
 ## todolist
 
-1. 完善签名算法(防止重放攻击)
-2. 支持rpc调用
+1. 支持rpc调用
 
 参考openresty配置
 
